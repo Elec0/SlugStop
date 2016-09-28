@@ -4,7 +4,9 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.Point;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -105,6 +107,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         @Override
         public void run()
         {
+            Log.d("Elec0", "timerRunnable " + pauseTimer);
             if(!pauseTimer)
             {
                 updateBusGPS();
@@ -123,20 +126,22 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public void busGPSCallback(String result)
     {
         busList.clear();
-        try
+        if(result != null)
         {
-            JSONArray jsonArr = new JSONArray(result);
-            for(int i = 0; i < jsonArr.length(); ++i)
+            try
             {
-                JSONObject jsonObj = jsonArr.getJSONObject(i);
-                BusData bus = new BusData(jsonObj.getInt("id"), jsonObj.getDouble("lon"), jsonObj.getDouble("lat"), jsonObj.getString("type"));
-                busList.add(bus);
-                //Log.d("Elec0", bus.toString());
+                JSONArray jsonArr = new JSONArray(result);
+                for (int i = 0; i < jsonArr.length(); ++i)
+                {
+                    JSONObject jsonObj = jsonArr.getJSONObject(i);
+                    BusData bus = new BusData(jsonObj.getInt("id"), jsonObj.getDouble("lon"), jsonObj.getDouble("lat"), jsonObj.getString("type"));
+                    busList.add(bus);
+                    //Log.d("Elec0", bus.toString());
+                }
+            } catch (Exception e)
+            {
+                Log.e("Elec0", "Bus GPS Callback Error", e);
             }
-        }
-        catch(Exception e)
-        {
-            Log.e("Elec0", "Error", e);
         }
         busUpdateMarker();
     }
@@ -201,8 +206,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if(selectedMarker != null) // Move the marker
             {
                 selectedMarker.setLoc(b.getLoc());
-                //selectedMarker.updatePosition();
-
                 animateMarker(selectedMarker.getMarker(), b.getLoc(), false);
             }
             else // Create the marker
@@ -230,6 +233,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 Marker m = mMap.addMarker(new MarkerOptions()
                             .position(b.getLoc())
                             .title(b.getType())
+                            .zIndex(0.5f)
                             .icon(BitmapDescriptorFactory.fromResource(icon)));
                 markerList.add(new MarkerData(b.getID(), m, b.getLoc(), b.getType()));
             }
@@ -262,13 +266,20 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     }
 
     /***
-     * Method to animate marker movement
+     * Method to animate marker movement. Got this off of StackOverflow, I think.
+     * Meant to grab the url but it's too late now
      * @param marker
      * @param toPosition
      * @param hideMarker
      */
     public void animateMarker(final Marker marker, final LatLng toPosition, final boolean hideMarker)
     {
+        // Don't move if there's nowhere to move. Prevents the shaking when busses aren't moving
+        if(marker.getPosition().equals(toPosition))
+        {
+            return;
+        }
+
         final Handler handler = new Handler();
         final long start = SystemClock.uptimeMillis();
         Projection proj = mMap.getProjection();
@@ -282,12 +293,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             @Override
             public void run() {
                 long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed
-                        / duration);
-                double lng = t * toPosition.longitude + (1 - t)
-                        * startLatLng.longitude;
-                double lat = t * toPosition.latitude + (1 - t)
-                        * startLatLng.latitude;
+                float t = interpolator.getInterpolation((float) elapsed / duration);
+                double lng = t * toPosition.longitude + (1 - t) * startLatLng.longitude;
+                double lat = t * toPosition.latitude + (1 - t) * startLatLng.latitude;
                 marker.setPosition(new LatLng(lat, lng));
 
                 if (t < 1.0) {
@@ -309,6 +317,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public void onPause()
     {
         super.onPause();
+        Log.d("Elec0", "onPause");
         pauseTimer = true;
     }
 
@@ -316,6 +325,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     public void onResume()
     {
         super.onResume();
+        Log.d("Elec0", "onResume");
         pauseTimer = false;
     }
 
@@ -390,21 +400,30 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     private void loadBusStops()
     {
+        int height = 50, width = 50;
         for(BusStopData b : innerLoopList)
         {
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_gold, getTheme());
+            Bitmap bit = bitmapdraw.getBitmap();
+            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
+
             Marker m = mMap.addMarker(new MarkerOptions()
                     .position(b.getLoc())
                     .title(b.getName())
                     .snippet("Inner Loop")
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.slugroute_gold)));
+                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
         }
         for(BusStopData b : outerLoopList)
         {
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
+            Bitmap bit = bitmapdraw.getBitmap();
+            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
+
             Marker m = mMap.addMarker(new MarkerOptions()
                     .position(b.getLoc())
                     .title(b.getName())
                     .snippet("Outer Loop")
-                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.slugroute_blue)));
+                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
         }
     }
 
@@ -416,8 +435,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         @Override
         protected String doInBackground(String... args) {
+            Log.d("Elec0", "Update Bus Async.");
 
-            try {
+            try
+            {
                 URL url = new URL("http://bts.ucsc.edu:8081/location/get");
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
@@ -428,6 +449,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     return stream;
 
                 }
+                catch(Exception e)
+                {
+                    Log.e("Elec0", "BusUpdate Error 1", e);
+                }
                 finally
                 {
                     urlConnection.disconnect();
@@ -435,7 +460,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             }
             catch(Exception e)
             {
-                Log.e("Elec0", "Error", e);
+                Log.e("Elec0", "BusUpdate Error 2", e);
             }
             return null;
         }
