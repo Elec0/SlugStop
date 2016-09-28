@@ -107,7 +107,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         @Override
         public void run()
         {
-            Log.d("Elec0", "timerRunnable " + pauseTimer);
             if(!pauseTimer)
             {
                 updateBusGPS();
@@ -136,9 +135,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     JSONObject jsonObj = jsonArr.getJSONObject(i);
                     BusData bus = new BusData(jsonObj.getInt("id"), jsonObj.getDouble("lon"), jsonObj.getDouble("lat"), jsonObj.getString("type"));
                     busList.add(bus);
-                    //Log.d("Elec0", bus.toString());
                 }
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Log.e("Elec0", "Bus GPS Callback Error", e);
             }
@@ -149,7 +148,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private void busUpdateMarker()
     {
         // If a bus turns its transmitter off, we want to stop displaying the bus on the map.
-
         if(busList.size() == 0)
         {
             if(firstRun == true)
@@ -173,6 +171,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 {
                     m.getMarker().remove();
                 }
+                markerList.clear();
             }
             return;
         }
@@ -435,7 +434,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         @Override
         protected String doInBackground(String... args) {
-            Log.d("Elec0", "Update Bus Async.");
 
             try
             {
