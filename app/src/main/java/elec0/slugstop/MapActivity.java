@@ -153,7 +153,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if(firstRun == true)
             {
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setMessage("It appears no busses are running at this time")
+                builder.setMessage("It appears no buses are running at this time")
                         .setCancelable(false)
                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
