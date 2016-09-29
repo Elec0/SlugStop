@@ -1,4 +1,4 @@
-package elec0.slugroutev2;
+package elec0.slugstop;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -343,7 +343,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         int width = size.x;
         int height = size.y;
 
-        if ( ContextCompat.checkSelfPermission( this, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED ||
+        if (ContextCompat.checkSelfPermission( this, android.Manifest.permission.ACCESS_COARSE_LOCATION ) != PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission( this, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED)
         {
             ActivityCompat.requestPermissions( this, new String[] {  android.Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION}, 13 ); // the 13 is arbitrary

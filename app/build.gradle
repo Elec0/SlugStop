@@ -4,7 +4,7 @@ android {
     compileSdkVersion 24
     buildToolsVersion "23.0.1"
     defaultConfig {
-        applicationId "elec0.slugroutev2"
+        applicationId "elec0.slugstop"
         minSdkVersion 21
         targetSdkVersion 24
         versionCode 1

@@ -1,4 +1,4 @@
-package elec0.slugroutev2;
+package elec0.slugstop;
 
 import com.google.android.gms.maps.model.LatLng;
 
