@@ -3,6 +3,7 @@ package elec0.slugstop;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Point;
@@ -51,8 +52,23 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private List<MarkerData> markerList;
     private List<BusStopData> innerLoopList, outerLoopList;
     private boolean firstRun = true;
-
+    private SharedPreferences prefs = null;
     private Marker lastOpened = null;
+
+    // Runs without a timer by reposting this handler at the end of the runnable
+    Handler timerHandler = new Handler();
+    Runnable timerRunnable = new Runnable() {
+        @Override
+        public void run()
+        {
+            if(!pauseTimer)
+            {
+                updateBusGPS();
+            }
+            timerHandler.postDelayed(this, 1000);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -66,6 +82,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         markerList = new ArrayList<>();
         innerLoopList = new ArrayList<>();
         outerLoopList = new ArrayList<>();
+
+        prefs = getSharedPreferences("elec0.slugstop", MODE_PRIVATE);
         
         // Populate the inner loop stops
         innerLoopList.add(new BusStopData(5, new LatLng( 36.9999313354492, -122.062049865723), "McLaughlin & Science Hill"));
@@ -102,21 +120,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         outerLoopList.add(new BusStopData(28, new LatLng( 36.992977142334, -122.065223693848), "Heller & College 8 & Porter"));
     }
 
-    //runs without a timer by reposting this handler at the end of the runnable
-    Handler timerHandler = new Handler();
-    Runnable timerRunnable = new Runnable() {
-        @Override
-        public void run()
-        {
-            if(!pauseTimer)
-            {
-                updateBusGPS();
-            }
-            timerHandler.postDelayed(this, 1000);
-        }
-    };
-
-
     private void updateBusGPS()
     {
         // http://bts.ucsc.edu:8081/location/get
@@ -151,18 +154,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         // If a bus turns its transmitter off, we want to stop displaying the bus on the map.
         if(busList.size() == 0)
         {
+            // If no busses are running, which is possible late at night, we want to show a message saying that, but we only want to do it once per times the app is launched
             if(firstRun == true)
             {
-                AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setMessage("It appears no buses are running at this time")
-                        .setCancelable(false)
-                        .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                //do things
-                            }
-                        });
-                AlertDialog alert = builder.create();
-                alert.show();
+                showDialog("It appears no busses are running at this time.", "OK");
                 firstRun = false;
             }
 
@@ -265,68 +260,76 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
     }
 
-    /***
-     * Method to animate marker movement. Got this off of StackOverflow, I think.
-     * Meant to grab the url but it's too late now
-     * @param marker
-     * @param toPosition
-     * @param hideMarker
-     */
-    public void animateMarker(final Marker marker, final LatLng toPosition, final boolean hideMarker)
+    private void loadBusStops()
     {
-        // Don't move if there's nowhere to move. Prevents the shaking when busses aren't moving
-        if(marker.getPosition().equals(toPosition))
+        int height = 50, width = 50;
+        for(BusStopData b : innerLoopList)
         {
-            return;
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_gold, getTheme());
+            Bitmap bit = bitmapdraw.getBitmap();
+            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
+
+            Marker m = mMap.addMarker(new MarkerOptions()
+                    .position(b.getLoc())
+                    .title(b.getName())
+                    .snippet("Inner Loop")
+                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
         }
+        for(BusStopData b : outerLoopList)
+        {
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
+            Bitmap bit = bitmapdraw.getBitmap();
+            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
 
-        final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
-        Projection proj = mMap.getProjection();
-        Point startPoint = proj.toScreenLocation(marker.getPosition());
-        final LatLng startLatLng = proj.fromScreenLocation(startPoint);
-        final long duration = 500;
-
-        final Interpolator interpolator = new LinearInterpolator();
-
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                long elapsed = SystemClock.uptimeMillis() - start;
-                float t = interpolator.getInterpolation((float) elapsed / duration);
-                double lng = t * toPosition.longitude + (1 - t) * startLatLng.longitude;
-                double lat = t * toPosition.latitude + (1 - t) * startLatLng.latitude;
-                marker.setPosition(new LatLng(lat, lng));
-
-                if (t < 1.0) {
-                    // Post again 16ms later.
-                    handler.postDelayed(this, 16);
-                } else {
-                    if (hideMarker) {
-                        marker.setVisible(false);
-                    } else {
-                        marker.setVisible(true);
-                    }
-                }
-            }
-        });
+            Marker m = mMap.addMarker(new MarkerOptions()
+                    .position(b.getLoc())
+                    .title(b.getName())
+                    .snippet("Outer Loop")
+                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
+        }
     }
-
 
     @Override
     public void onPause()
     {
         super.onPause();
-        Log.d("Elec0", "onPause");
-        pauseTimer = true;
+        if(!pauseTimer)
+            pauseTimer = true;
     }
 
     @Override
     public void onResume()
     {
         super.onResume();
-        Log.d("Elec0", "onResume");
-        pauseTimer = false;
+        if(pauseTimer)
+            pauseTimer = false;
+
+        if (prefs.getBoolean("firstrun", true))
+        {
+            // First time ever run tutorial
+            showDialog("The circles are busses, the diamonds are bus stops.", "OK");
+            showDialog("Tap on any marker to see more information about it.", "OK");
+
+            prefs.edit().putBoolean("firstrun", false).apply(); // if this runs more than once, use .commit()
+        }
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults)
+    {
+        // Permission granted, turn on location. This is only required for the first run
+        if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        {
+            try
+            {
+                mMap.setMyLocationEnabled(true);
+            }
+            catch(SecurityException e)
+            {
+                // This should never happen.
+            }
+        }
     }
 
     /**
@@ -399,35 +402,68 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         timerHandler.postDelayed(timerRunnable, 0);
     }
 
-    private void loadBusStops()
+    // GENERAL METHODS BELOW
+
+    public void showDialog(String msg, String confirmMsg)
     {
-        int height = 50, width = 50;
-        for(BusStopData b : innerLoopList)
-        {
-            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_gold, getTheme());
-            Bitmap bit = bitmapdraw.getBitmap();
-            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
-
-            Marker m = mMap.addMarker(new MarkerOptions()
-                    .position(b.getLoc())
-                    .title(b.getName())
-                    .snippet("Inner Loop")
-                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-        }
-        for(BusStopData b : outerLoopList)
-        {
-            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
-            Bitmap bit = bitmapdraw.getBitmap();
-            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
-
-            Marker m = mMap.addMarker(new MarkerOptions()
-                    .position(b.getLoc())
-                    .title(b.getName())
-                    .snippet("Outer Loop")
-                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(msg)
+                .setCancelable(false)
+                .setPositiveButton(confirmMsg, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        //do things
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
     }
 
+    /***
+     * Method to animate marker movement. Got this off of StackOverflow, I think.
+     * Meant to grab the url but it's too late now
+     * @param marker
+     * @param toPosition
+     * @param hideMarker
+     */
+    public void animateMarker(final Marker marker, final LatLng toPosition, final boolean hideMarker)
+    {
+        // Don't move if there's nowhere to move. Prevents the shaking when busses aren't moving
+        if(marker.getPosition().equals(toPosition))
+        {
+            return;
+        }
+
+        final Handler handler = new Handler();
+        final long start = SystemClock.uptimeMillis();
+        Projection proj = mMap.getProjection();
+        Point startPoint = proj.toScreenLocation(marker.getPosition());
+        final LatLng startLatLng = proj.fromScreenLocation(startPoint);
+        final long duration = 500;
+
+        final Interpolator interpolator = new LinearInterpolator();
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                long elapsed = SystemClock.uptimeMillis() - start;
+                float t = interpolator.getInterpolation((float) elapsed / duration);
+                double lng = t * toPosition.longitude + (1 - t) * startLatLng.longitude;
+                double lat = t * toPosition.latitude + (1 - t) * startLatLng.latitude;
+                marker.setPosition(new LatLng(lat, lng));
+
+                if (t < 1.0) {
+                    // Post again 16ms later.
+                    handler.postDelayed(this, 16);
+                } else {
+                    if (hideMarker) {
+                        marker.setVisible(false);
+                    } else {
+                        marker.setVisible(true);
+                    }
+                }
+            }
+        });
+    }
 
 
     class BusUpdateAsync extends AsyncTask<String, String, String>
