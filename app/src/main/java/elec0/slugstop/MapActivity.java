@@ -50,7 +50,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private boolean pauseTimer = false;
     private List<BusData> busList;
     private List<MarkerData> markerList;
-    private List<BusStopData> innerLoopList, outerLoopList;
+    private List<BusStopData> innerLoopList, outerLoopList, nightOwlList;
     private boolean firstRun = true;
     private SharedPreferences prefs = null;
     private Marker lastOpened = null;
@@ -82,6 +82,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         markerList = new ArrayList<>();
         innerLoopList = new ArrayList<>();
         outerLoopList = new ArrayList<>();
+        nightOwlList = new ArrayList<>();
 
         prefs = getSharedPreferences("elec0.slugstop", MODE_PRIVATE);
         
@@ -118,6 +119,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         outerLoopList.add(new BusStopData(25, new LatLng( 36.989917755127, -122.067230224609), "Heller & Oakes College"));
         outerLoopList.add(new BusStopData(27, new LatLng( 36.991828918457, -122.066833496094), "Heller & Family Student Housing"));
         outerLoopList.add(new BusStopData(28, new LatLng( 36.992977142334, -122.065223693848), "Heller & College 8 & Porter"));
+
+        // Night Owl Stops
+        nightOwlList.add(new BusStopData(30, new LatLng(36.9661616, -122.0401418), "Mission & Bay Out"));
+        nightOwlList.add(new BusStopData(31, new LatLng(36.9666591, -122.0406027), "Mission & Bay In"));
+        nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Mission & Bay Out"));
+
     }
 
     private void updateBusGPS()
@@ -155,7 +162,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         if(busList.size() == 0)
         {
             // If no busses are running, which is possible late at night, we want to show a message saying that, but we only want to do it once per times the app is launched
-            if(firstRun == true)
+            if(firstRun)
             {
                 showDialog("It appears no busses are running at this time.", "OK");
                 firstRun = false;
@@ -206,6 +213,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             else // Create the marker
             {
                 int icon = 0;
+                String snippet = "";
                 switch(b.getType().toUpperCase())
                 {
                     case "LOOP":
@@ -216,6 +224,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                         break;
                     case "NIGHT OWL":
                         icon = R.drawable.slugrotue_nightowl;
+                        snippet = "Stops at all metro stops";
                         break;
                     case "LOOP OUT OF SERVICE AT BARN THEATER":
                     case "OUT OF SERVICE/SORRY":
@@ -229,6 +238,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             .position(b.getLoc())
                             .title(b.getType())
                             .zIndex(0.5f)
+                            .snippet(snippet)
                             .icon(BitmapDescriptorFactory.fromResource(icon)));
                 markerList.add(new MarkerData(b.getID(), m, b.getLoc(), b.getType()));
             }
@@ -285,6 +295,18 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     .position(b.getLoc())
                     .title(b.getName())
                     .snippet("Outer Loop")
+                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
+        }
+        for(BusStopData b : nightOwlList)
+        {
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_purple, getTheme());
+            Bitmap bit = bitmapdraw.getBitmap();
+            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
+
+            Marker m = mMap.addMarker(new MarkerOptions()
+                    .position(b.getLoc())
+                    .title(b.getName())
+                    .snippet("Night Owl")
                     .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
         }
     }
@@ -395,6 +417,13 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
                 // Event was handled by our code do not launch default behaviour.
                 return true;
+            }
+        });
+
+        mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+            @Override
+            public void onInfoWindowClick(Marker marker) {
+                Log.e("Elec0", "Info window clicked. " + marker.getId());
             }
         });
 
