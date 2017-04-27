@@ -5,7 +5,10 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
@@ -121,15 +124,14 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         outerLoopList.add(new BusStopData(28, new LatLng( 36.992977142334, -122.065223693848), "Heller & College 8 & Porter"));
 
         // Night Owl Stops
-        nightOwlList.add(new BusStopData(30, new LatLng(36.9661616, -122.0401418), "Mission & Bay Out"));
-        nightOwlList.add(new BusStopData(31, new LatLng(36.9666591, -122.0406027), "Mission & Bay In"));
+        nightOwlList.add(new BusStopData(30, new LatLng(36.966213, -122.039845), "Mission & Bay Out"));
+        nightOwlList.add(new BusStopData(31, new LatLng(36.966923, -122.040621), "Mission & Bay In"));
         nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Mission & Bay Out"));
 
     }
 
     private void updateBusGPS()
     {
-        // http://bts.ucsc.edu:8081/location/get
         new BusUpdateAsync().execute("");
     }
 
@@ -212,7 +214,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             }
             else // Create the marker
             {
-                int icon = 0;
+                int icon = 0, width = getDrawableWidth(getResources(), R.drawable.slugroute_loop), height = getDrawableHeight(getResources(), R.drawable.slugroute_loop);
                 String snippet = "";
                 switch(b.getType().toUpperCase())
                 {
@@ -234,6 +236,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                         icon = R.drawable.slugroute_special;
                         break;
                 }
+
+                BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
+                Bitmap bit = bitmapdraw.getBitmap();
+                Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
+                //smallMarker = hue(smallMarker, 47);
+
                 Marker m = mMap.addMarker(new MarkerOptions()
                             .position(b.getLoc())
                             .title(b.getType())
@@ -256,7 +264,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                         remove = false;
                     }
                 }
-                if(remove == true) // At this point it's not in the bus list, so add it to the list to be removed from the main list
+                if(remove) // At this point it's not in the bus list, so add it to the list to be removed from the main list
                 {
                     toRemove.add(mar);
                 }
@@ -296,6 +304,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     .title(b.getName())
                     .snippet("Outer Loop")
                     .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
+
         }
         for(BusStopData b : nightOwlList)
         {
@@ -424,6 +433,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             @Override
             public void onInfoWindowClick(Marker marker) {
                 Log.e("Elec0", "Info window clicked. " + marker.getId());
+                // Check if marker is a bus, if so update icon with a change in hue or something.
+
+
             }
         });
 
@@ -510,8 +522,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 try
                 {
                     InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-                    String stream = readStream(in);
-                    return stream;
+                    return readStream(in);
 
                 }
                 catch(Exception e)
@@ -548,5 +559,49 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         protected void onPostExecute(String result) {
             busGPSCallback(result);
         }
+    }
+
+    // ***** General Functions *****
+
+    // hue-range: [0, 360] -> Default = 0
+    public static Bitmap hue(Bitmap bitmap, float hue) {
+        Bitmap newBitmap = bitmap.copy(bitmap.getConfig(), true);
+        final int width = newBitmap.getWidth();
+        final int height = newBitmap.getHeight();
+        float [] hsv = new float[3];
+
+        for(int y = 0; y < height; y++){
+            for(int x = 0; x < width; x++){
+                int pixel = newBitmap.getPixel(x,y);
+                Color.colorToHSV(pixel,hsv);
+                hsv[0] = hue;
+                newBitmap.setPixel(x,y,Color.HSVToColor(Color.alpha(pixel),hsv));
+            }
+        }
+
+        bitmap.recycle();
+        bitmap = null;
+
+        return newBitmap;
+    }
+    /**
+     * Gets width of drawable
+     * @param resources
+     * @param id
+     * @return
+     */
+    private int getDrawableWidth(Resources resources, int id){
+        Bitmap bitmap = BitmapFactory.decodeResource(resources, id);
+        return bitmap.getWidth();
+    }
+    /**
+     * Gets height of drawable
+     * @param resources
+     * @param id
+     * @return
+     */
+    private int getDrawableHeight(Resources resources, int id){
+        Bitmap bitmap = BitmapFactory.decodeResource(resources, id);
+        return bitmap.getHeight();
     }
 }
