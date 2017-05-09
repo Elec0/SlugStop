@@ -8,13 +8,6 @@ public class MarkerData
     private int id;
     private Marker marker;
     private LatLng loc;
-
-    public String getType()
-    {return type;}
-
-    public void setType(String type)
-    {this.type = type;}
-
     private String type;
 
     public MarkerData(int id, Marker marker, LatLng loc, String type)
@@ -64,4 +57,10 @@ public class MarkerData
 
     public void setLat(double lat)
     { loc = new LatLng(lat, loc.longitude); }
+
+    public String getType()
+    {return type;}
+
+    public void setType(String type)
+    {this.type = type;}
 }

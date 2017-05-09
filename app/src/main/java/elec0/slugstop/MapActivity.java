@@ -57,6 +57,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private boolean firstRun = true;
     private SharedPreferences prefs = null;
     private Marker lastOpened = null;
+    private int busIDHighlighted = -1, lastBusIDHighlighted = -1;
 
     // Runs without a timer by reposting this handler at the end of the runnable
     Handler timerHandler = new Handler();
@@ -126,7 +127,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         // Night Owl Stops
         nightOwlList.add(new BusStopData(30, new LatLng(36.966213, -122.039845), "Mission & Bay Out"));
         nightOwlList.add(new BusStopData(31, new LatLng(36.966923, -122.040621), "Mission & Bay In"));
-        nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Mission & Bay Out"));
+        nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Pacific & Cathcart"));
 
     }
 
@@ -199,11 +200,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if(selectedMarker != null)
             {
                 // If the type is different, we need to remove the marker and put in a new one to handle the change in icon
-                if (!selectedMarker.getType().equals(b.getType()))
+                if (!selectedMarker.getType().equals(b.getType()) || lastBusIDHighlighted == b.getID())
                 {
                     markerList.remove(selectedMarker);
                     selectedMarker.getMarker().remove();
                     selectedMarker = null;
+                    lastBusIDHighlighted = -1; // Clear this once we've reset the icon
                 }
             }
 
@@ -214,40 +216,37 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             }
             else // Create the marker
             {
-                int icon = 0, width = getDrawableWidth(getResources(), R.drawable.slugroute_loop), height = getDrawableHeight(getResources(), R.drawable.slugroute_loop);
+                int icon = 0;
                 String snippet = "";
+                boolean h = !(busIDHighlighted == b.getID());
                 switch(b.getType().toUpperCase())
                 {
                     case "LOOP":
-                        icon = R.drawable.slugroute_loop;
+                        icon = (h ? R.drawable.slugroute_loop : R.drawable.slugroute_loop_highlight);
                         break;
                     case "UPPER CAMPUS":
-                        icon = R.drawable.slugroute_upper;
+                        icon = (h ? R.drawable.slugroute_upper : R.drawable.slugroute_upper_highlight);
                         break;
                     case "NIGHT OWL":
-                        icon = R.drawable.slugrotue_nightowl;
+                        icon = (h ? R.drawable.slugrotue_nightowl : R.drawable.slugroute_nightowl_highlight);
                         snippet = "Stops at all metro stops";
                         break;
                     case "LOOP OUT OF SERVICE AT BARN THEATER":
                     case "OUT OF SERVICE/SORRY":
-                        icon = R.drawable.slugroute_out;
+                        icon = (h ? R.drawable.slugroute_out : R.drawable.slugroute_out_highlight);
                         break;
                     default:
-                        icon = R.drawable.slugroute_special;
+                        icon = (h ? R.drawable.slugroute_special : R.drawable.slugroute_special_highlight);
                         break;
                 }
-
-                BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
-                Bitmap bit = bitmapdraw.getBitmap();
-                Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
-                //smallMarker = hue(smallMarker, 47);
 
                 Marker m = mMap.addMarker(new MarkerOptions()
                             .position(b.getLoc())
                             .title(b.getType())
                             .zIndex(0.5f)
-                            .snippet(snippet)
                             .icon(BitmapDescriptorFactory.fromResource(icon)));
+                if(!snippet.equals(""))
+                    m.setSnippet(snippet);
                 markerList.add(new MarkerData(b.getID(), m, b.getLoc(), b.getType()));
             }
 
@@ -431,8 +430,56 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
-            public void onInfoWindowClick(Marker marker) {
-                Log.e("Elec0", "Info window clicked. " + marker.getId());
+            public void onInfoWindowClick(final Marker marker) {
+                // This is O(2m+b), which isn't that bad, I guess...
+                for(MarkerData m : markerList)
+                {
+                    if(m.getMarker().getId().equals(marker.getId()))
+                    {
+                        Log.e("Elec0", "Found marker " + marker.getId());
+                        BusData linkedBus = null, oldHiBus = null;
+                        for(BusData b : busList)
+                        {
+                            // Find the bus we're trying to highlight
+                            if(b.getID() == m.getID())
+                            {
+                                linkedBus = b;
+                                break;
+                            }
+                        }
+
+                        Log.e("Elec0", linkedBus.toString());
+
+                       //linkedBus.setHighlighted(!linkedBus.isHighlighted());
+                        // If there was a bus that was highlighted, find the linked MarkerData and remove it so the marker itself updates
+
+                        for(MarkerData oldM : markerList)
+                        {
+                            if(oldM.getID() == linkedBus.getID())
+                            {
+                                markerList.remove(oldM);
+                                oldM.getMarker().remove();
+                                break;
+                            }
+                        }
+
+                        /*if(busIDHighlighted == linkedBus.getID())
+                            busIDHighlighted = -1;
+                        else*/
+                        if(busIDHighlighted != linkedBus.getID())
+                        {
+                            lastBusIDHighlighted = busIDHighlighted;
+                            busIDHighlighted = linkedBus.getID();
+                        }
+                        else // The user tapped the same bus a second time to de-highlighgt it
+                        {
+                            lastBusIDHighlighted = -1;
+                            busIDHighlighted = -1;
+                        }
+                        busUpdateMarker();
+                        break;
+                    }
+                }
                 // Check if marker is a bus, if so update icon with a change in hue or something.
 
 
@@ -550,6 +597,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     i = is.read();
                 }
                 return bo.toString();
+                //return "[{\"id\":\"90\",\"lon\":-122.0542,\"lat\":36.99102,\"type\":\"UPPER CAMPUS\"},{\"id\":\"80\",\"lon\":-122.054436,\"lat\":36.977352,\"type\":\"LOOP\"},{\"id\":\"83\",\"lon\":-122.05556,\"lat\":36.995377,\"type\":\"LOOP\"},{\"id\":\"79\",\"lon\":-122.05759,\"lat\":36.978577,\"type\":\"LOOP\"},{\"id\":\"96\",\"lon\":-122.06477,\"lat\":36.988667,\"type\":\"UPPER CAMPUS\"},{\"id\":\"93\",\"lon\":-122.053154,\"lat\":36.979633,\"type\":\"OUT OF SERVICE/SORRY\"},{\"id\":\"86\",\"lon\":-122.05362,\"lat\":36.977722,\"type\":\"LOOP\"},{\"id\":\"92\",\"lon\":-122.05113,\"lat\":36.990925,\"type\":\"OUT OF SERVICE/SORRY\"},{\"id\":\"95\",\"lon\":-122.062,\"lat\":36.999996,\"type\":\"LOOP\"},{\"id\":\"82\",\"lon\":-122.05331,\"lat\":36.979767,\"type\":\"OUT OF SERVICE/SORRY\"}]";
             } catch (IOException e) {
                 return "";
             }

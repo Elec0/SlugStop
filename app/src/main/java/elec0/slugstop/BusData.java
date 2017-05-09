@@ -39,5 +39,4 @@ public class BusData
     { this.type = type; }
     public LatLng getLoc()
     { return loc; }
-
 }
