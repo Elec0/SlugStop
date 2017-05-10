@@ -45,6 +45,9 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 public class MapActivity extends FragmentActivity implements OnMapReadyCallback {
@@ -53,7 +56,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private boolean pauseTimer = false;
     private List<BusData> busList;
     private List<MarkerData> markerList;
-    private List<BusStopData> innerLoopList, outerLoopList, nightOwlList;
+    private List<BusStopData> innerLoopList, outerLoopList, nightOwlList, miscList;
     private boolean firstRun = true;
     private SharedPreferences prefs = null;
     private Marker lastOpened = null;
@@ -87,6 +90,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         innerLoopList = new ArrayList<>();
         outerLoopList = new ArrayList<>();
         nightOwlList = new ArrayList<>();
+        miscList = new ArrayList<>();
 
         prefs = getSharedPreferences("elec0.slugstop", MODE_PRIVATE);
         
@@ -129,6 +133,8 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         nightOwlList.add(new BusStopData(31, new LatLng(36.966923, -122.040621), "Mission & Bay In"));
         nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Pacific & Cathcart"));
 
+        // Tutorial Stop
+        miscList.add(new BusStopData(33, new LatLng(37.003311, -122.059843), "Tutorial Stop"));
     }
 
     private void updateBusGPS()
@@ -167,7 +173,19 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             // If no busses are running, which is possible late at night, we want to show a message saying that, but we only want to do it once per times the app is launched
             if(firstRun)
             {
-                showDialog("It appears no busses are running at this time.", "OK");
+                Date date = new Date();   // given date
+                Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
+                calendar.setTime(date);   // assigns calendar to given date
+                int hour = calendar.get(Calendar.HOUR_OF_DAY); // gets hour in 24h format
+                boolean isNight = (hour > 22 && hour < 24) || (hour < 6 && hour > 0);
+
+                String msg = "It appears no busses are running at this time.";
+
+                if(isNight)
+                    msg += "\nIt appears to be night. Busses often don't run at night.";
+                else
+                    msg += "\nIt's daytime. Check slugroute.com if you think SlugStop isn't working correctly.";
+                showDialog(msg, "OK");
                 firstRun = false;
             }
 
@@ -280,41 +298,32 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private void loadBusStops()
     {
         int height = 50, width = 50;
-        for(BusStopData b : innerLoopList)
+        createMarker(innerLoopList, R.drawable.slugroute_gold, "Inner Loop", width, height);
+        createMarker(outerLoopList, R.drawable.slugroute_blue, "Outer Loop", width, height);
+        createMarker(nightOwlList, R.drawable.slugroute_purple, "Night Owl", width, height);
+        createMarker(miscList, R.drawable.slugroute_question, "Click here to view message", (int)(width*1.5f), (int)(height*1.5f));
+    }
+
+    /***
+     * Create markers associated with a list of BusStopDatas.
+     * @param list
+     * @param icon Drawable resource
+     * @param snippet
+     * @param width Width of icon
+     * @param height Height of icon
+     */
+    private void createMarker(List<BusStopData> list, int icon, String snippet, int width, int height)
+    {
+        for(BusStopData b : list)
         {
-            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_gold, getTheme());
+            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(icon, getTheme());
             Bitmap bit = bitmapdraw.getBitmap();
             Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
 
             Marker m = mMap.addMarker(new MarkerOptions()
                     .position(b.getLoc())
                     .title(b.getName())
-                    .snippet("Inner Loop")
-                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-        }
-        for(BusStopData b : outerLoopList)
-        {
-            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_blue, getTheme());
-            Bitmap bit = bitmapdraw.getBitmap();
-            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
-
-            Marker m = mMap.addMarker(new MarkerOptions()
-                    .position(b.getLoc())
-                    .title(b.getName())
-                    .snippet("Outer Loop")
-                    .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-
-        }
-        for(BusStopData b : nightOwlList)
-        {
-            BitmapDrawable bitmapdraw = (BitmapDrawable)getResources().getDrawable(R.drawable.slugroute_purple, getTheme());
-            Bitmap bit = bitmapdraw.getBitmap();
-            Bitmap smallMarker = Bitmap.createScaledBitmap(bit, width, height, false);
-
-            Marker m = mMap.addMarker(new MarkerOptions()
-                    .position(b.getLoc())
-                    .title(b.getName())
-                    .snippet("Night Owl")
+                    .snippet(snippet)
                     .icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
         }
     }
@@ -341,6 +350,14 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             showDialog("Tap on any marker to see more information about it.", "OK");
 
             prefs.edit().putBoolean("firstrun", false).apply(); // if this runs more than once, use .commit()
+        }
+        if(prefs.getBoolean("secondrun", true))
+        {
+            // Add more info, for after they saw it the first time.
+            showDialog("Tap on a bus, then tap on the info window for that bus to highlight it so it can be easily located.", "OK");
+            showDialog("Tap on the window again to un-highlight it.", "OK");
+
+            prefs.edit().putBoolean("secondrun", false).apply();
         }
 
     }
@@ -431,12 +448,23 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(final Marker marker) {
+
+                if(marker.getTitle().equals("Tutorial Stop"))
+                {
+                    // The windows all show up at once, so display them last-to-first so they show up in the correct order.
+                    // I'm sure there's a way to wait for each one to finish displaying, but this works.
+                    showDialog("Tap on the window again to un-highlight it.", "OK");
+                    showDialog("Tap on a bus, then tap on the info window for that bus to highlight it so it can be easily located.", "OK");
+                    showDialog("The circles are busses, the diamonds are bus stops.", "OK");
+                    showDialog("Tap on any marker to see more information about it.", "OK");
+                    return;
+                }
                 // This is O(2m+b), which isn't that bad, I guess...
                 for(MarkerData m : markerList)
                 {
                     if(m.getMarker().getId().equals(marker.getId()))
                     {
-                        Log.e("Elec0", "Found marker " + marker.getId());
+                        Log.d("Elec0", "Found marker " + marker.getId());
                         BusData linkedBus = null, oldHiBus = null;
                         for(BusData b : busList)
                         {
@@ -448,9 +476,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             }
                         }
 
-                        Log.e("Elec0", linkedBus.toString());
-
-                       //linkedBus.setHighlighted(!linkedBus.isHighlighted());
                         // If there was a bus that was highlighted, find the linked MarkerData and remove it so the marker itself updates
 
                         for(MarkerData oldM : markerList)
