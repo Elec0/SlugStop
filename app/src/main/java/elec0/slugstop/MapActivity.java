@@ -96,46 +96,49 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         prefs = getSharedPreferences("elec0.slugstop", MODE_PRIVATE);
         
         // Populate the inner loop stops
-        innerLoopList.add(new BusStopData(5, new LatLng( 36.9999313354492, -122.062049865723), "McLaughlin & Science Hill"));
-        innerLoopList.add(new BusStopData(2, new LatLng( 36.9967041015625, -122.063583374023), "Heller & Kerr Hall"));
-        innerLoopList.add(new BusStopData(3, new LatLng( 36.999210357666, -122.064338684082), "Heller & Kresge College"));
-        innerLoopList.add(new BusStopData(5, new LatLng( 36.9999313354492, -122.062049865723), "McLaughlin & Science Hill"));
-        innerLoopList.add(new BusStopData(6, new LatLng( 36.9997062683105, -122.05834197998), "McLaughlin & College 9 & 10 - Health Center"));
-        innerLoopList.add(new BusStopData(10, new LatLng( 36.9966621398926, -122.055480957031), "Hagar & Bookstore"));
-        innerLoopList.add(new BusStopData(13, new LatLng( 36.9912567138672, -122.054962158203), "Hagar & East Remote"));
-        innerLoopList.add(new BusStopData(15, new LatLng( 36.985523223877, -122.053588867188), "Hagar & Lower Quarry Rd"));
-        innerLoopList.add(new BusStopData(17, new LatLng( 36.9815368652344, -122.052131652832), "Coolidge & Hagar"));
-        innerLoopList.add(new BusStopData(18, new LatLng( 36.9787902832031, -122.057762145996), "High & Western Dr"));
-        innerLoopList.add(new BusStopData(20, new LatLng( 36.9773025512695, -122.054328918457), "High & Barn Theater"));
-        innerLoopList.add(new BusStopData(23, new LatLng( 36.9826698303223, -122.062492370605), "Empire Grade & Arboretum"));
-        innerLoopList.add(new BusStopData(26, new LatLng( 36.9905776977539, -122.066116333008), "Heller & Oakes College"));
-        innerLoopList.add(new BusStopData(29, new LatLng( 36.9927787780762, -122.064880371094), "Heller & College 8 & Porter"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9999313354492, -122.062049865723), "McLaughlin & Science Hill"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9967041015625, -122.063583374023), "Heller & Kerr Hall"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.999210357666, -122.064338684082), "Heller & Kresge College"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9999313354492, -122.062049865723), "McLaughlin & Science Hill"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9997062683105, -122.05834197998), "McLaughlin & College 9 & 10 - Health Center"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9966621398926, -122.055480957031), "Hagar & Bookstore"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9912567138672, -122.054962158203), "Hagar & East Remote"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.985523223877, -122.053588867188), "Hagar & Lower Quarry Rd"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9815368652344, -122.052131652832), "Coolidge & Hagar"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9787902832031, -122.057762145996), "High & Western Dr"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9773025512695, -122.054328918457), "High & Barn Theater"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9826698303223, -122.062492370605), "Empire Grade & Arboretum"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9905776977539, -122.066116333008), "Heller & Oakes College"));
+        innerLoopList.add(new BusStopData(new LatLng( 36.9927787780762, -122.064880371094), "Heller & College 8 & Porter"));
+        // Remote bus stops. Should actually add a new category called upper campus
+        innerLoopList.add(new BusStopData(new LatLng(36.988537, -122.064799), "West Remote Parking Lot"));
+        innerLoopList.add(new BusStopData(new LatLng(36.990786, -122.052190), "East Remote Parking Lot"));
 
         // Outer loop stops
-        outerLoopList.add(new BusStopData(1, new LatLng( 36.9992790222168, -122.064552307129), "Heller & Kresge College"));
-        outerLoopList.add(new BusStopData(4, new LatLng( 37.0000228881836, -122.062339782715), "McLaughlin & Science Hill"));
-        outerLoopList.add(new BusStopData(7, new LatLng( 36.9999389648438, -122.058349609375), "McLaughlin & College 9 & 10 - Health Center"));
-        outerLoopList.add(new BusStopData(8, new LatLng( 36.9990234375, -122.055229187012), "McLaughlin & Crown College"));
-        outerLoopList.add(new BusStopData(9, new LatLng( 36.9974822998047, -122.055030822754), "Hagar & Bookstore-Stevenson College"));
-        outerLoopList.add(new BusStopData(11, new LatLng( 36.9942474365234, -122.055511474609), "Hagar & Field House East"));
-        outerLoopList.add(new BusStopData(12, new LatLng( 36.9912986755371, -122.054656982422), "Hagar & East Remote"));
-        outerLoopList.add(new BusStopData(14, new LatLng( 36.985912322998, -122.053520202637), "Hagar & Lower Quarry Rd"));
-        outerLoopList.add(new BusStopData(16, new LatLng( 36.9813537597656, -122.051971435547), "Coolidge & Hagar"));
-        outerLoopList.add(new BusStopData(19, new LatLng( 36.9776763916016, -122.053558349609), "Coolidge & Main Entrance"));
-        outerLoopList.add(new BusStopData(21, new LatLng( 36.9786148071289, -122.05785369873), "High & Western Dr"));
-        outerLoopList.add(new BusStopData(22, new LatLng( 36.9798469543457, -122.059257507324), "Empire Grade & Tosca Terrace"));
-        outerLoopList.add(new BusStopData(24, new LatLng( 36.9836616516113, -122.064964294434), "Empire Grade & Arboretum"));
-        outerLoopList.add(new BusStopData(25, new LatLng( 36.989917755127, -122.067230224609), "Heller & Oakes College"));
-        outerLoopList.add(new BusStopData(27, new LatLng( 36.991828918457, -122.066833496094), "Heller & Family Student Housing"));
-        outerLoopList.add(new BusStopData(28, new LatLng( 36.992977142334, -122.065223693848), "Heller & College 8 & Porter"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9992790222168, -122.064552307129), "Heller & Kresge College"));
+        outerLoopList.add(new BusStopData(new LatLng( 37.0000228881836, -122.062339782715), "McLaughlin & Science Hill"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9999389648438, -122.058349609375), "McLaughlin & College 9 & 10 - Health Center"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9990234375, -122.055229187012), "McLaughlin & Crown College"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9974822998047, -122.055030822754), "Hagar & Bookstore-Stevenson College"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9942474365234, -122.055511474609), "Hagar & Field House East"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9912986755371, -122.054656982422), "Hagar & East Remote"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.985912322998, -122.053520202637), "Hagar & Lower Quarry Rd"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9813537597656, -122.051971435547), "Coolidge & Hagar"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9776763916016, -122.053558349609), "Coolidge & Main Entrance"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9786148071289, -122.05785369873), "High & Western Dr"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9798469543457, -122.059257507324), "Empire Grade & Tosca Terrace"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.9836616516113, -122.064964294434), "Empire Grade & Arboretum"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.989917755127, -122.067230224609), "Heller & Oakes College"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.991828918457, -122.066833496094), "Heller & Family Student Housing"));
+        outerLoopList.add(new BusStopData(new LatLng( 36.992977142334, -122.065223693848), "Heller & College 8 & Porter"));
 
         // Night Owl Stops
-        nightOwlList.add(new BusStopData(30, new LatLng(36.966213, -122.039845), "Mission & Bay Out"));
-        nightOwlList.add(new BusStopData(31, new LatLng(36.966923, -122.040621), "Mission & Bay In"));
-        nightOwlList.add(new BusStopData(32, new LatLng(36.971551, -122.026006), "Pacific & Cathcart"));
+        nightOwlList.add(new BusStopData(new LatLng(36.966213, -122.039845), "Mission & Bay Out"));
+        nightOwlList.add(new BusStopData(new LatLng(36.966923, -122.040621), "Mission & Bay In"));
+        nightOwlList.add(new BusStopData(new LatLng(36.971551, -122.026006), "Pacific & Cathcart"));
 
         // Tutorial Stop
-        miscList.add(new BusStopData(33, new LatLng(37.003311, -122.059843), "Tutorial Stop"));
+        miscList.add(new BusStopData(new LatLng(37.003311, -122.059843), "Tutorial Stop"));
     }
 
     private void updateBusGPS()

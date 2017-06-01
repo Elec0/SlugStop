@@ -4,29 +4,25 @@ import com.google.android.gms.maps.model.LatLng;
 
 public class BusStopData
 {
+    private static int IDS = 0;
     private int id;
     private LatLng loc;
     private String name;
 
-    BusStopData(int id, LatLng loc, String name)
+    BusStopData(LatLng loc, String name)
     {
-        this.id = id;
+        this.id = ++IDS;
         this.loc = loc;
         this.name = name;
     }
-    BusStopData(int id, double lat, double lon, String name)
+    BusStopData(double lat, double lon, String name)
     {
-        this(id, new LatLng(lat, lon), name);
+        this(new LatLng(lat, lon), name);
     }
 
     public int getID()
     {
         return id;
-    }
-
-    public void setID(int id)
-    {
-        this.id = id;
     }
 
     public LatLng getLoc()
