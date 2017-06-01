@@ -20,6 +20,7 @@ import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Display;
+import android.view.WindowManager;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
@@ -528,7 +529,17 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     }
                 });
         AlertDialog alert = builder.create();
-        alert.show();
+        try
+        {
+            if (isFinishing()) {
+                alert.show();
+            }
+        }
+        catch(WindowManager.BadTokenException e)
+        {
+            Log.e("Elec0", e.getStackTrace().toString());
+            Toast.makeText(getApplicationContext(), "There has been an error showing a dialog.", Toast.LENGTH_SHORT);
+        }
     }
 
     /***
