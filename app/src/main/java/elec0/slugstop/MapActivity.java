@@ -534,9 +534,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         AlertDialog alert = builder.create();
         try
         {
-            if (isFinishing()) {
+            //if (isFinishing()) {
                 alert.show();
-            }
+            //}
         }
         catch(WindowManager.BadTokenException e)
         {
