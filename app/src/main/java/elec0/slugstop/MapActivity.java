@@ -55,7 +55,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     private GoogleMap mMap;
     private boolean pauseTimer = false;
-    private List<BusData> busList;
+    private List<MarkerData> busList;
     private List<MarkerData> markerList;
     private List<BusStopData> innerLoopList, outerLoopList, nightOwlList, miscList;
     private boolean firstRun = true;
@@ -157,7 +157,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 for (int i = 0; i < jsonArr.length(); ++i)
                 {
                     JSONObject jsonObj = jsonArr.getJSONObject(i);
-                    BusData bus = new BusData(jsonObj.getInt("id"), jsonObj.getDouble("lon"), jsonObj.getDouble("lat"), jsonObj.getString("type"));
+                    MarkerData bus = new MarkerData(jsonObj.getInt("id"), jsonObj.getDouble("lon"), jsonObj.getDouble("lat"), jsonObj.getString("type"));
                     busList.add(bus);
                 }
             }
@@ -177,18 +177,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             // If no busses are running, which is possible late at night, we want to show a message saying that, but we only want to do it once per times the app is launched
             if(firstRun)
             {
-                Date date = new Date();   // given date
-                Calendar calendar = GregorianCalendar.getInstance(); // creates a new calendar instance
-                calendar.setTime(date);   // assigns calendar to given date
-                int hour = calendar.get(Calendar.HOUR_OF_DAY); // gets hour in 24h format
-                boolean isNight = (hour > 22 && hour < 24) || (hour < 6 && hour > 0);
-
-                String msg = "It appears no busses are running at this time.";
-
-                if(isNight)
-                    msg += "\nIt appears to be night. Busses often don't run at night.";
-                else
-                    msg += "\nIt's daytime. Check slugroute.com if you think SlugStop isn't working correctly.";
+                String msg = "It appears no busses are running at this time.\nCheck slugroute.com if you think SlugStop isn't working correctly.";
                 showDialog(msg, "OK");
                 firstRun = false;
             }
@@ -203,7 +192,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             }
             return;
         }
-        for(BusData b : busList)
+        for(MarkerData b : busList)
         {
             // We don't want to add a marker, we want to move the marker that has the same id as the bus
             // If no marker exists, create it.
@@ -234,7 +223,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if(selectedMarker != null) // Move the marker
             {
                 selectedMarker.setLoc(b.getLoc());
-                animateMarker(selectedMarker.getMarker(), b.getLoc(), false);
+                animateMarker(selectedMarker, b.getLoc(), false);
             }
             else // Create the marker
             {
@@ -262,14 +251,22 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                         break;
                 }
 
-                Marker m = mMap.addMarker(new MarkerOptions()
+                Marker busMarker = mMap.addMarker(new MarkerOptions()
                             .position(b.getLoc())
                             .title(b.getType())
                             .zIndex(0.5f)
                             .icon(BitmapDescriptorFactory.fromResource(icon)));
                 if(!snippet.equals(""))
-                    m.setSnippet(snippet);
-                markerList.add(new MarkerData(b.getID(), m, b.getLoc(), b.getType()));
+                    busMarker.setSnippet(snippet);
+
+                Marker directionMarker = mMap.addMarker(new MarkerOptions()
+                        .position(b.getLoc())
+                        .zIndex(0.1f)
+                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.bus_arrow)));
+
+                MarkerData md = new MarkerData(b.getID(), busMarker, b.getLoc(), b.getType());
+                md.setDirectionMarker(directionMarker);
+                markerList.add(md);
             }
 
             // If markerList contains any bus IDs that aren't in busList, remove them
@@ -278,7 +275,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             for(MarkerData mar : markerList)
             {
                 boolean remove = true;
-                for(BusData bus : busList)
+                for(MarkerData bus : busList)
                 {
                     if(mar.getID() == bus.getID()) // It's in the list, don't remove it
                     {
@@ -310,9 +307,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     /***
      * Create markers associated with a list of BusStopDatas.
-     * @param list
+     * @param list List of BusStopData
      * @param icon Drawable resource
-     * @param snippet
+     * @param snippet Text value for snippet
      * @param width Width of icon
      * @param height Height of icon
      */
@@ -425,6 +422,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         {
             @Override
             public boolean onMarkerClick(Marker marker) {
+
+                // Should check here if the marker clicked is a direction one, if so don't do anything
+
                 // Check if there is an open info window
                 if (lastOpened != null) {
                     // Close the info window
@@ -449,6 +449,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             }
         });
 
+        // This is the white window that shows up once you click on a marker
         mMap.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
             @Override
             public void onInfoWindowClick(final Marker marker) {
@@ -464,13 +465,14 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     return;
                 }
                 // This is O(2m+b), which isn't that bad, I guess...
+                // It could absolutely get better since I merged BusData and MarkerData, though
                 for(MarkerData m : markerList)
                 {
                     if(m.getMarker().getId().equals(marker.getId()))
                     {
                         Log.d("Elec0", "Found marker " + marker.getId());
-                        BusData linkedBus = null, oldHiBus = null;
-                        for(BusData b : busList)
+                        MarkerData linkedBus = null, oldHiBus = null;
+                        for(MarkerData b : busList)
                         {
                             // Find the bus we're trying to highlight
                             if(b.getID() == m.getID())
@@ -548,12 +550,15 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     /***
      * Method to animate marker movement. Got this off of StackOverflow, I think.
      * Meant to grab the url but it's too late now
-     * @param marker
-     * @param toPosition
-     * @param hideMarker
+     * @param markerData The MarkerData class that contains the Marker object
+     * @param toPosition Position to move the marker to
+     * @param hideMarker If the marker should be hidden or not
      */
-    public void animateMarker(final Marker marker, final LatLng toPosition, final boolean hideMarker)
+    public void animateMarker(final MarkerData markerData, final LatLng toPosition, final boolean hideMarker)
     {
+        final Marker marker = markerData.getMarker();
+        final Marker markerD = markerData.getDirectionMarker(); // Handle moving the direction arrow too
+
         // Don't move if there's nowhere to move. Prevents the shaking when busses aren't moving
         if(marker.getPosition().equals(toPosition))
         {
@@ -561,13 +566,19 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         }
 
         final Handler handler = new Handler();
-        final long start = SystemClock.uptimeMillis();
         Projection proj = mMap.getProjection();
+
+        final long start = SystemClock.uptimeMillis();
         Point startPoint = proj.toScreenLocation(marker.getPosition());
         final LatLng startLatLng = proj.fromScreenLocation(startPoint);
-        final long duration = 500;
+        final float startRotation = markerD.getRotation();
+        final float endRotation = (float)calcRotation(startLatLng, toPosition);
+
+        // Calculate the new rotation angle based on the difference between the two marker positions
+
 
         final Interpolator interpolator = new LinearInterpolator();
+        final long duration = 500; // Time in ms for the animation to take
 
         handler.post(new Runnable() {
             @Override
@@ -576,22 +587,47 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 float t = interpolator.getInterpolation((float) elapsed / duration);
                 double lng = t * toPosition.longitude + (1 - t) * startLatLng.longitude;
                 double lat = t * toPosition.latitude + (1 - t) * startLatLng.latitude;
+                double rot = t * endRotation + (1-t) * startRotation;
+
                 marker.setPosition(new LatLng(lat, lng));
+                markerD.setPosition(new LatLng(lat, lng));
+                markerD.setRotation((float)-rot); // This is probably going to need adjusting, since the marker start at 90 degrees
 
                 if (t < 1.0) {
                     // Post again 16ms later.
                     handler.postDelayed(this, 16);
                 } else {
-                    if (hideMarker) {
-                        marker.setVisible(false);
-                    } else {
-                        marker.setVisible(true);
-                    }
+                    marker.setVisible(!hideMarker);
+                    markerD.setVisible(!hideMarker);
                 }
             }
         });
     }
 
+    /***
+     * Calculates the angle of rotation between the two positions.
+     * SetRotation is in degrees clockwise
+     * @param start
+     * @param end
+     * @return double
+     */
+    private double calcRotation(LatLng start, LatLng end)
+    {
+        double cosX = (start.latitude * end.latitude + start.longitude * end.longitude);
+        cosX /= (Math.sqrt(Math.pow(start.latitude, 2) + Math.pow(start.longitude, 2)) * Math.sqrt(Math.pow(end.latitude, 2) + Math.pow(end.longitude, 2)));
+        return acos(cosX);
+    }
+
+    /***
+     * Faster arccos algorithm, since actual inverse trig functions are slow
+     * Max error is apparently 10.31 degrees
+     * https://stackoverflow.com/questions/3380628/fast-arc-cos-algorithm
+     * @param x
+     * @return
+     */
+    private double acos(double x) {
+        return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966;
+    }
 
     class BusUpdateAsync extends AsyncTask<String, String, String>
     {
@@ -636,7 +672,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                     i = is.read();
                 }
                 return bo.toString();
-                //return "[{\"id\":\"90\",\"lon\":-122.0542,\"lat\":36.99102,\"type\":\"UPPER CAMPUS\"},{\"id\":\"80\",\"lon\":-122.054436,\"lat\":36.977352,\"type\":\"LOOP\"},{\"id\":\"83\",\"lon\":-122.05556,\"lat\":36.995377,\"type\":\"LOOP\"},{\"id\":\"79\",\"lon\":-122.05759,\"lat\":36.978577,\"type\":\"LOOP\"},{\"id\":\"96\",\"lon\":-122.06477,\"lat\":36.988667,\"type\":\"UPPER CAMPUS\"},{\"id\":\"93\",\"lon\":-122.053154,\"lat\":36.979633,\"type\":\"OUT OF SERVICE/SORRY\"},{\"id\":\"86\",\"lon\":-122.05362,\"lat\":36.977722,\"type\":\"LOOP\"},{\"id\":\"92\",\"lon\":-122.05113,\"lat\":36.990925,\"type\":\"OUT OF SERVICE/SORRY\"},{\"id\":\"95\",\"lon\":-122.062,\"lat\":36.999996,\"type\":\"LOOP\"},{\"id\":\"82\",\"lon\":-122.05331,\"lat\":36.979767,\"type\":\"OUT OF SERVICE/SORRY\"}]";
+                //return "[{\"id\":\"90\",\"lon\":-122.0542,\"lat\":36.99102,\"type\":\"UPPER CAMPUS\"},{\"id\":\"80\",\"lon\":-122.054436,\"lat\":36.977352,\"type\":\"LOOP\"},{\"id\":\"83\",\"lon\":-122.05556,\"lat\":36.995377,\"type\":\"LOOP\"},{\"id\":\"79\",\"lon\":-122.05759,\"lat\":36.978577,\"type\":\"LOOP\"},{\"id\":\"96\",\"lon\":-122.06477,\"lat\":36.988667,\"type\":\"UPPER CAMPUS\"},{\"id\":\"93\",\"lon\":-122.053154,\"lat\":36.979633,\"type\":\"SPECIAL\"},{\"id\":\"86\",\"lon\":-122.05362,\"lat\":36.977722,\"type\":\"LOOP\"},{\"id\":\"92\",\"lon\":-122.05113,\"lat\":36.990925,\"type\":\"OUT OF SERVICE/SORRY\"},{\"id\":\"95\",\"lon\":-122.062,\"lat\":36.999996,\"type\":\"LOOP\"},{\"id\":\"82\",\"lon\":-122.05331,\"lat\":36.979767,\"type\":\"OUT OF SERVICE/SORRY\"}]";
             } catch (IOException e) {
                 return "";
             }
@@ -650,27 +686,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
     // ***** General Functions *****
 
-    // hue-range: [0, 360] -> Default = 0
-    public static Bitmap hue(Bitmap bitmap, float hue) {
-        Bitmap newBitmap = bitmap.copy(bitmap.getConfig(), true);
-        final int width = newBitmap.getWidth();
-        final int height = newBitmap.getHeight();
-        float [] hsv = new float[3];
-
-        for(int y = 0; y < height; y++){
-            for(int x = 0; x < width; x++){
-                int pixel = newBitmap.getPixel(x,y);
-                Color.colorToHSV(pixel,hsv);
-                hsv[0] = hue;
-                newBitmap.setPixel(x,y,Color.HSVToColor(Color.alpha(pixel),hsv));
-            }
-        }
-
-        bitmap.recycle();
-        bitmap = null;
-
-        return newBitmap;
-    }
     /**
      * Gets width of drawable
      * @param resources
