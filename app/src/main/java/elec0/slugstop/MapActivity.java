@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.BitmapDrawable;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -187,6 +188,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 for (MarkerData m : markerList)
                 {
                     m.getMarker().remove();
+                    m.getDirectionMarker().remove();
                 }
                 markerList.clear();
             }
@@ -215,6 +217,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 {
                     markerList.remove(selectedMarker);
                     selectedMarker.getMarker().remove();
+                    selectedMarker.getDirectionMarker().remove();
                     selectedMarker = null;
                     lastBusIDHighlighted = -1; // Clear this once we've reset the icon
                 }
@@ -255,6 +258,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             .position(b.getLoc())
                             .title(b.getType())
                             .zIndex(0.5f)
+                            .anchor(0.5f, 0.5f)
                             .icon(BitmapDescriptorFactory.fromResource(icon)));
                 if(!snippet.equals(""))
                     busMarker.setSnippet(snippet);
@@ -262,6 +266,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 Marker directionMarker = mMap.addMarker(new MarkerOptions()
                         .position(b.getLoc())
                         .zIndex(0.1f)
+                        .anchor(0.5f, 0.5f)
+                        .rotation(0)
+                        .visible(false) // Start not visible, since we have no direction data
                         .icon(BitmapDescriptorFactory.fromResource(R.drawable.bus_arrow)));
 
                 MarkerData md = new MarkerData(b.getID(), busMarker, b.getLoc(), b.getType());
@@ -290,6 +297,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             for(MarkerData markerRemove : toRemove)
             {
                 markerRemove.getMarker().remove();
+                markerRemove.getDirectionMarker().remove();
                 markerList.remove(markerRemove);
                 Log.d("Elec0", "Remove marker id " + markerRemove.getID());
             }
@@ -490,6 +498,7 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                             {
                                 markerList.remove(oldM);
                                 oldM.getMarker().remove();
+                                oldM.getDirectionMarker().remove();
                                 break;
                             }
                         }
@@ -559,11 +568,26 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         final Marker marker = markerData.getMarker();
         final Marker markerD = markerData.getDirectionMarker(); // Handle moving the direction arrow too
 
+        Location from = new Location("");
+        Location to = new Location("");
+        from.setLatitude(marker.getPosition().latitude);
+        from.setLongitude(marker.getPosition().longitude);
+        to.setLatitude(toPosition.latitude);
+        to.setLongitude(toPosition.longitude);
+
+        double dist = from.distanceTo(to);
+        // If the app has been paused for a while it's possible a bus has moved really far, and we don't want to use that movement for the direction arrow
+        boolean movedFar = false;
+        if(dist > 200) // I think this is suitably large
+            movedFar = true;
+
         // Don't move if there's nowhere to move. Prevents the shaking when busses aren't moving
-        if(marker.getPosition().equals(toPosition))
+        // Also don't update if the bus is moving a really small amount. This usually comes from errors in the GPS unit on the bus
+        if(marker.getPosition().equals(toPosition) || dist < 2)
         {
             return;
         }
+
 
         final Handler handler = new Handler();
         Projection proj = mMap.getProjection();
@@ -571,11 +595,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         final long start = SystemClock.uptimeMillis();
         Point startPoint = proj.toScreenLocation(marker.getPosition());
         final LatLng startLatLng = proj.fromScreenLocation(startPoint);
-        final float startRotation = markerD.getRotation();
-        final float endRotation = (float)calcRotation(startLatLng, toPosition);
 
         // Calculate the new rotation angle based on the difference between the two marker positions
-
+        final float endRotation = from.bearingTo(to);
+        markerD.setVisible(!movedFar); // If it's moved far, then don't show it this loop
+        if(!movedFar)
+            markerD.setRotation(endRotation);
 
         final Interpolator interpolator = new LinearInterpolator();
         final long duration = 500; // Time in ms for the animation to take
@@ -587,11 +612,9 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 float t = interpolator.getInterpolation((float) elapsed / duration);
                 double lng = t * toPosition.longitude + (1 - t) * startLatLng.longitude;
                 double lat = t * toPosition.latitude + (1 - t) * startLatLng.latitude;
-                double rot = t * endRotation + (1-t) * startRotation;
 
                 marker.setPosition(new LatLng(lat, lng));
                 markerD.setPosition(new LatLng(lat, lng));
-                markerD.setRotation((float)-rot); // This is probably going to need adjusting, since the marker start at 90 degrees
 
                 if (t < 1.0) {
                     // Post again 16ms later.
@@ -604,30 +627,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
         });
     }
 
-    /***
-     * Calculates the angle of rotation between the two positions.
-     * SetRotation is in degrees clockwise
-     * @param start
-     * @param end
-     * @return double
-     */
-    private double calcRotation(LatLng start, LatLng end)
-    {
-        double cosX = (start.latitude * end.latitude + start.longitude * end.longitude);
-        cosX /= (Math.sqrt(Math.pow(start.latitude, 2) + Math.pow(start.longitude, 2)) * Math.sqrt(Math.pow(end.latitude, 2) + Math.pow(end.longitude, 2)));
-        return acos(cosX);
-    }
-
-    /***
-     * Faster arccos algorithm, since actual inverse trig functions are slow
-     * Max error is apparently 10.31 degrees
-     * https://stackoverflow.com/questions/3380628/fast-arc-cos-algorithm
-     * @param x
-     * @return
-     */
-    private double acos(double x) {
-        return (-0.69813170079773212 * x * x - 0.87266462599716477) * x + 1.5707963267948966;
-    }
 
     class BusUpdateAsync extends AsyncTask<String, String, String>
     {
