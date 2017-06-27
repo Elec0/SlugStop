@@ -533,10 +533,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
         // Calculate the new rotation angle based on the difference between the two marker positions
         final float endRotation = from.bearingTo(to);
-        markerD.setVisible(!movedFar); // If it's moved far, then don't show it this loop
-        marker.setVisible(!hideMarker); // There's no need to set visibility inside the interpolator
         if(!movedFar)
             markerD.setRotation(endRotation);
+        markerD.setVisible(!movedFar); // If it's moved far, then don't show it this loop
+        marker.setVisible(!hideMarker); // There's no need to set visibility inside the interpolator
 
         final Interpolator interpolator = new LinearInterpolator();
         final long duration = 500; // Time in ms for the animation to take
