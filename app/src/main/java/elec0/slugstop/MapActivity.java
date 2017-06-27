@@ -62,7 +62,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
     private boolean firstRun = true;
     private SharedPreferences prefs = null;
     private Marker lastOpened = null;
-    private int busIDHighlighted = -1, lastBusIDHighlighted = -1;
 
     // Runs without a timer by reposting this handler at the end of the runnable
     Handler timerHandler = new Handler();
@@ -213,13 +212,12 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             if(selectedMarker != null)
             {
                 // If the type is different, we need to remove the marker and put in a new one to handle the change in icon
-                if (!selectedMarker.getType().equals(b.getType()) || lastBusIDHighlighted == b.getID())
+                if (!selectedMarker.getType().equals(b.getType()))
                 {
                     markerList.remove(selectedMarker);
                     selectedMarker.getMarker().remove();
                     selectedMarker.getDirectionMarker().remove();
                     selectedMarker = null;
-                    lastBusIDHighlighted = -1; // Clear this once we've reset the icon
                 }
             }
 
@@ -232,25 +230,24 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
             {
                 int icon = 0;
                 String snippet = "";
-                boolean h = !(busIDHighlighted == b.getID());
                 switch(b.getType().toUpperCase())
                 {
                     case "LOOP":
-                        icon = (h ? R.drawable.slugroute_loop : R.drawable.slugroute_loop_highlight);
+                        icon = R.drawable.slugroute_loop;
                         break;
                     case "UPPER CAMPUS":
-                        icon = (h ? R.drawable.slugroute_upper : R.drawable.slugroute_upper_highlight);
+                        icon = R.drawable.slugroute_upper;
                         break;
                     case "NIGHT OWL":
-                        icon = (h ? R.drawable.slugrotue_nightowl : R.drawable.slugroute_nightowl_highlight);
+                        icon = R.drawable.slugroute_nightowl;
                         snippet = "Stops at all metro stops";
                         break;
                     case "LOOP OUT OF SERVICE AT BARN THEATER":
                     case "OUT OF SERVICE/SORRY":
-                        icon = (h ? R.drawable.slugroute_out : R.drawable.slugroute_out_highlight);
+                        icon = R.drawable.slugroute_out;
                         break;
                     default:
-                        icon = (h ? R.drawable.slugroute_special : R.drawable.slugroute_special_highlight);
+                        icon = R.drawable.slugroute_special;
                         break;
                 }
 
@@ -360,15 +357,6 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
 
             prefs.edit().putBoolean("firstrun", false).apply(); // if this runs more than once, use .commit()
         }
-        if(prefs.getBoolean("secondrun", true))
-        {
-            // Add more info, for after they saw it the first time.
-            showDialog("Tap on a bus, then tap on the info window for that bus to highlight it so it can be easily located.", "OK");
-            showDialog("Tap on the window again to un-highlight it.", "OK");
-
-            prefs.edit().putBoolean("secondrun", false).apply();
-        }
-
     }
 
     @Override
@@ -466,63 +454,10 @@ public class MapActivity extends FragmentActivity implements OnMapReadyCallback 
                 {
                     // The windows all show up at once, so display them last-to-first so they show up in the correct order.
                     // I'm sure there's a way to wait for each one to finish displaying, but this works.
-                    showDialog("Tap on the window again to un-highlight it.", "OK");
-                    showDialog("Tap on a bus, then tap on the info window for that bus to highlight it so it can be easily located.", "OK");
                     showDialog("The circles are busses, the diamonds are bus stops.", "OK");
                     showDialog("Tap on any marker to see more information about it.", "OK");
                     return;
                 }
-                // This is O(2m+b), which isn't that bad, I guess...
-                // It could absolutely get better since I merged BusData and MarkerData, though
-                for(MarkerData m : markerList)
-                {
-                    if(m.getMarker().getId().equals(marker.getId()))
-                    {
-                        Log.d("Elec0", "Found marker " + marker.getId());
-                        MarkerData linkedBus = null, oldHiBus = null;
-                        for(MarkerData b : busList)
-                        {
-                            // Find the bus we're trying to highlight
-                            if(b.getID() == m.getID())
-                            {
-                                linkedBus = b;
-                                break;
-                            }
-                        }
-
-                        // If there was a bus that was highlighted, find the linked MarkerData and remove it so the marker itself updates
-
-                        for(MarkerData oldM : markerList)
-                        {
-                            if(oldM.getID() == linkedBus.getID())
-                            {
-                                markerList.remove(oldM);
-                                oldM.getMarker().remove();
-                                oldM.getDirectionMarker().remove();
-                                break;
-                            }
-                        }
-
-                        /*if(busIDHighlighted == linkedBus.getID())
-                            busIDHighlighted = -1;
-                        else*/
-                        if(busIDHighlighted != linkedBus.getID())
-                        {
-                            lastBusIDHighlighted = busIDHighlighted;
-                            busIDHighlighted = linkedBus.getID();
-                        }
-                        else // The user tapped the same bus a second time to de-highlighgt it
-                        {
-                            lastBusIDHighlighted = -1;
-                            busIDHighlighted = -1;
-                        }
-                        busUpdateMarker();
-                        break;
-                    }
-                }
-                // Check if marker is a bus, if so update icon with a change in hue or something.
-
-
             }
         });
 
