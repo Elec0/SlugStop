@@ -34,6 +34,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -92,21 +93,30 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         getWindow().requestFeature(Window.FEATURE_ACTION_BAR_OVERLAY);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
         // Setup the Nav Drawer
-        drawerData = new String[] {"Test 1", "Test 2"};
-
+        drawerData = new String[] {"Metro Schedule", "OPERS Live Facility Count"};
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawerList = (ListView) findViewById(R.id.left_drawer);
         drawerList.setAdapter(new ArrayAdapter<String>(this, R.layout.list_content, drawerData));
         drawerList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Log.d("Elec0", "Click");
+                switch((int)id)
+                {
+                    case 0: // Metro schedule was selected
+                        General.startIntent(MapActivity.this, MetroActivity.class);
+                        break;
+
+                    case 1: // OPERS data was selected
+
+                        break;
+                }
             }
         });
 
@@ -131,16 +141,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         // Set the drawer toggle as the DrawerListener
         drawerLayout.addDrawerListener(drawerToggle);
 
+        // Enable the up button
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
-
-        // Setup the action bar
-//        Toolbar myToolbar = (Toolbar) findViewById(R.id.toolbar);
-//        setSupportActionBar(myToolbar);
-//
-        android.support.v7.app.ActionBar actionBar = getSupportActionBar();
-//        actionBar.setBackgroundDrawable(new ColorDrawable(Color.parseColor("#330000FF")));
-//        actionBar.setStackedBackgroundDrawable(new ColorDrawable(Color.parseColor("#0000FFFF")));
 
 
 
@@ -209,8 +212,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         if (drawerToggle.onOptionsItemSelected(item)) {
             return true;
         }
-
-        // Handle your other action bar items...
 
         return super.onOptionsItemSelected(item);
     }
