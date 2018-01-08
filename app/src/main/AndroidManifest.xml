@@ -30,20 +30,29 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />
 
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths"/>
+        </provider>
+
         <activity
             android:name=".MapActivity"
             android:label="@string/title_activity_map">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".MetroActivity"
+            android:label="@string/title_activity_metro"
+            android:parentActivityName=".MapActivity"></activity>
 
-        <activity android:name=".MetroActivity"
-            android:parentActivityName=".MapActivity"
-            android:label="@string/title_activity_metro">
-        </activity>
     </application>
 
 </manifest>
