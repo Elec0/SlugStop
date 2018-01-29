@@ -99,7 +99,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         // Setup the Nav Drawer
-        drawerData = new String[] {"Metro Schedule", "OPERS Live Facility Count"};
+        drawerData = new String[] {"Metro Schedule"/*, "OPERS Live Facility Count"*/};
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawerList = (ListView) findViewById(R.id.left_drawer);
         drawerList.setAdapter(new ArrayAdapter<String>(this, R.layout.list_content, drawerData));
